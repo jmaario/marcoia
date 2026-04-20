@@ -1223,16 +1223,25 @@ function saveState(){
 }
 
 async function syncToSupabase(){
-  if(!currentUser){console.warn('Marco: sync ignorado — sem usuário logado');return;}
+  if(!currentUser){
+    console.warn('Marco: sync ignorado — currentUser é null');
+    // Try to recover session
+    const {data:{session}}=await sb.auth.getSession();
+    if(session?.user){currentUser=session.user;}
+    else{return;}
+  }
   const uid=currentUser.id;
+  console.log('Marco: sincronizando para user', uid);
   const {error}=await sb.from('marco_data').upsert({
     user_id: uid,
     data: JSON.stringify(state),
     updated_at: new Date().toISOString()
   }, {onConflict:'user_id'});
   if(error){
-    console.error('Marco: erro ao salvar no Supabase', error);
-    toast('Erro ao salvar — verifique sua conexão');
+    console.error('Marco: erro Supabase', error.message, error.code, error.details);
+    toast('Erro ao salvar — '+error.message);
+  } else {
+    console.log('Marco: dados salvos no Supabase ✓');
   }
 }
 
@@ -1466,19 +1475,21 @@ function refreshDashboard(){
   const txs=state.transactions.filter(t=>txIM(t,curYear,curMonth));
   const inc=txs.filter(t=>t.type==='in').reduce((a,t)=>a+t.amount,0);
   const exp=txs.filter(t=>t.type==='out').reduce((a,t)=>a+t.amount,0);
-  document.getElementById('m-inc').textContent=fmt(inc);
-  document.getElementById('m-exp').textContent=fmt(exp);
+  const mInc=document.getElementById('m-inc');
+  const mExp=document.getElementById('m-exp');
+  if(mInc)mInc.textContent=fmt(inc);
+  if(mExp)mExp.textContent=fmt(exp);
   const bal=inc-exp;
   const balEl=document.getElementById('m-bal');
-  const balCard=balEl.closest('.mc');
-  balEl.textContent=fmt(bal);
+  const balCard=balEl?balEl.closest('.mc'):null;
+  if(balEl)balEl.textContent=fmt(bal);
   // dynamic gradient: positive=green, negative=red, zero=neutral
-  balEl.className='mv '+(bal>0?'pos':bal<0?'neg':'neu');
-  if(balCard){
-    balCard.className='mc '+(bal>0?'pos':bal<0?'neg':'neu');
-  }
-  document.getElementById('m-ic').textContent=txs.filter(t=>t.type==='in').length+' lançamentos';
-  document.getElementById('m-ec').textContent=txs.filter(t=>t.type==='out').length+' lançamentos';
+  if(balEl)balEl.className='mv '+(bal>0?'pos':bal<0?'neg':'neu');
+  if(balCard)balCard.className='mc '+(bal>0?'pos':bal<0?'neg':'neu');
+  const mIc=document.getElementById('m-ic');
+  const mEc=document.getElementById('m-ec');
+  if(mIc)mIc.textContent=txs.filter(t=>t.type==='in').length+' lançamentos';
+  if(mEc)mEc.textContent=txs.filter(t=>t.type==='out').length+' lançamentos';
   renderCatChart(txs);renderFlowChart(txs);renderDashTx(txs);renderDashInsights(txs,inc,exp);updateSidebarBadges();renderDashHeader(inc,exp);
 }
 
@@ -1748,7 +1759,7 @@ function renderTxList(){
   if(!txs.length){el.innerHTML=`<div class="empty"><div class="ei" style="display:flex;justify-content:center;color:var(--g2);">${SVGS.money}</div><div class="et">Nenhum lançamento encontrado.</div><button class="btn primary" onclick="openTxModal()">+ Adicionar</button></div>`;return;}
   el.innerHTML=txs.map(t=>txHTML(t)).join('');
 }
-function delTx(id){state.transactions=state.transactions.filter(t=>t.id!==id);saveState();renderDespesas();renderReceitas();refreshDashboard();toast('Removido');}
+function delTx(id){state.transactions=state.transactions.filter(t=>t.id!==id);saveState();renderDespesas();renderReceitas();refreshDashboard();updateSidebarBadges();toast('Removido');}
 
 // ─── MODAL TX ──────────────────────────────────────────
 function openTxModal(){setType('out');['tx-desc','tx-amt'].forEach(id=>document.getElementById(id).value='');document.getElementById('tx-dt').value=new Date().toISOString().split('T')[0];populateTxCat();document.getElementById('tx-mod').classList.add('open');setTimeout(()=>document.getElementById('tx-desc').focus(),100);}
@@ -1759,7 +1770,14 @@ function saveTx(){
   const desc=document.getElementById('tx-desc').value.trim(),amount=parseFloat(document.getElementById('tx-amt').value),cat=document.getElementById('tx-cat').value,date=document.getElementById('tx-dt').value;
   if(!desc||!amount||!date){toast('Preencha todos os campos');return;}
   state.transactions.push({id:Date.now(),type:curType,desc,amount,cat,date});
-  saveState();closeTxModal();refreshDashboard();renderDespesas();renderReceitas();toast('Lançamento salvo');
+  saveState();
+  closeTxModal();
+  refreshDashboard();
+  renderDespesas();
+  renderReceitas();
+  // Show dashboard to confirm the entry was saved
+  showPage('dashboard');
+  toast('Lançamento salvo!');
 }
 
 // ─── BUDGETS ───────────────────────────────────────────
@@ -1780,7 +1798,7 @@ function saveBudget(){
   if(!limit||limit<=0){toast('Valor inválido');return;}
   const i=state.budgets.findIndex(b=>b.cat===cat);
   if(i>=0)state.budgets[i].limit=limit;else state.budgets.push({cat,limit});
-  saveState();closeBModal();renderBudgets();toast('Orçamento salvo');
+  saveState();closeBModal();renderBudgets();refreshDashboard();toast('Orçamento salvo!');
 }
 function delBudget(i){state.budgets.splice(i,1);saveState();renderBudgets();toast('Removido');}
 
@@ -1834,7 +1852,7 @@ function saveGoal(){
   const monthlyTarget=parseFloat(document.getElementById('g-monthly').value)||0;
   if(!name||!target){toast('Preencha nome e valor alvo');return;}
   state.goals.push({id:Date.now(),name,emoji,target,current,monthlyTarget});
-  saveState();closeGModal();renderGoals();toast('Meta criada');
+  saveState();closeGModal();renderGoals();updateSidebarBadges();toast('Meta criada!');
 }
 function addGoal(i){const v=parseFloat(prompt('Quanto você guardou? (R$)'));if(!v||isNaN(v))return;state.goals[i].current=Math.min(state.goals[i].target,state.goals[i].current+v);saveState();renderGoals();toast('Meta atualizada');}
 function delGoal(i){state.goals.splice(i,1);saveState();renderGoals();toast('Removido');}
@@ -2279,8 +2297,8 @@ function renderComps(){
 
   // Sidebar badge
   const sbComp=document.getElementById('sb-comp');
-  const vencendo=ativos.filter(c=>diasParaVencer(c.venc)<=3).length;
   if(sbComp){
+    const vencendo=ativos.filter(c=>diasParaVencer(c.venc)<=3).length;
     if(vencendo>0){sbComp.textContent=vencendo+' vence'+(vencendo>1?'m':'');sbComp.className='nitem-badge warn';sbComp.style.display='';}
     else if(ativos.length){sbComp.textContent=ativos.length;sbComp.className='nitem-badge neu';sbComp.style.display='';}
     else sbComp.style.display='none';
@@ -2594,10 +2612,12 @@ function renderDashHeader(inc, exp){
   const msgEl = document.getElementById('dh-msg');
   const iconEl = document.getElementById('dh-icon');
 
-  if(dateEl) dateEl.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
-  if(greetEl) greetEl.textContent = greeting;
-  if(msgEl) msgEl.innerHTML = msg;
-  if(iconEl){ iconEl.innerHTML = iconHtml; iconEl.className = 'dh-right ' + iconClass; }
+  try{
+    if(dateEl) dateEl.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+    if(greetEl) greetEl.textContent = greeting;
+    if(msgEl) msgEl.innerHTML = msg;
+    if(iconEl){ iconEl.innerHTML = iconHtml; iconEl.className = 'dh-right ' + iconClass; }
+  }catch(e){console.warn('Marco: renderDashHeader error', e);}
 }
 
 // ─── EXPORT / IMPORT ───────────────────────────────────

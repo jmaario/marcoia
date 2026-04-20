@@ -2674,7 +2674,9 @@ function importData(input){
   reader.readAsText(file);
 }
 // ─── INIT ──────────────────────────────────────────────
-// Se Supabase não está configurado ainda, roda em modo local
+// Render date/greeting immediately on load (no auth needed)
+renderDashHeader(0, 0);
+
 if(SUPABASE_URL === 'COLE_SUA_URL_AQUI'){
   document.getElementById('auth-ov').classList.add('hidden');
   refreshDashboard();

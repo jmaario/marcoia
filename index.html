@@ -1223,26 +1223,36 @@ function saveState(){
 }
 
 async function syncToSupabase(){
-  if(!currentUser)return;
+  if(!currentUser){console.warn('Marco: sync ignorado — sem usuário logado');return;}
   const uid=currentUser.id;
-  await sb.from('marco_data').upsert({
+  const {error}=await sb.from('marco_data').upsert({
     user_id: uid,
     data: JSON.stringify(state),
     updated_at: new Date().toISOString()
   }, {onConflict:'user_id'});
+  if(error){
+    console.error('Marco: erro ao salvar no Supabase', error);
+    toast('Erro ao salvar — verifique sua conexão');
+  }
 }
 
 async function loadFromSupabase(){
   if(!currentUser)return;
-  const {data,error}=await sb.from('marco_data')
-    .select('data')
-    .eq('user_id', currentUser.id)
-    .single();
-  if(data?.data){
-    state=JSON.parse(data.data);
-    if(!state.comprometimentos)state.comprometimentos=[];
-    localStorage.setItem('marco_v1',JSON.stringify(state));
-  }
+  try{
+    const {data,error}=await sb.from('marco_data')
+      .select('data')
+      .eq('user_id', currentUser.id)
+      .maybeSingle();
+    if(error){console.error('Marco: erro ao carregar dados',error);return;}
+    if(data?.data){
+      state=JSON.parse(data.data);
+      if(!state.comprometimentos)state.comprometimentos=[];
+      localStorage.setItem('marco_v1',JSON.stringify(state));
+    } else {
+      // Novo usuário — estado vazio
+      state={transactions:[],budgets:[],goals:[],comprometimentos:[]};
+    }
+  }catch(e){console.error('Marco: loadFromSupabase falhou',e);}
 }
 
 // ─── AUTH ───────────────────────────────────────────────
@@ -1289,31 +1299,32 @@ function showAuthMsg(msg){
 }
 
 async function initAuth(){
-  const {data:{session}}=await sb.auth.getSession();
-  if(session?.user){
-    currentUser=session.user;
-    onUserLoggedIn();
-  } else {
-    document.getElementById('auth-ov').classList.remove('hidden');
-  }
+  // Listen first, then check session — avoids race condition
   sb.auth.onAuthStateChange(async(event,session)=>{
-    if(event==='SIGNED_IN'&&session?.user){
+    if(session?.user){
       currentUser=session.user;
       await onUserLoggedIn();
-    } else if(event==='SIGNED_OUT'){
+    } else {
       currentUser=null;
       document.getElementById('auth-ov').classList.remove('hidden');
     }
   });
+
+  // Check existing session
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){
+    document.getElementById('auth-ov').classList.remove('hidden');
+  }
 }
 
 async function onUserLoggedIn(){
   document.getElementById('auth-ov').classList.add('hidden');
+  // Load data from Supabase
   await loadFromSupabase();
   if(!state.comprometimentos)state.comprometimentos=[];
   // Set profile name from email if not set
   const prof=JSON.parse(localStorage.getItem('marco_profile')||'{}');
-  if(!prof.name&&currentUser.email){
+  if(!prof.name&&currentUser?.email){
     prof.name=currentUser.email.split('@')[0];
     localStorage.setItem('marco_profile',JSON.stringify(prof));
   }

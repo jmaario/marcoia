@@ -2561,13 +2561,26 @@ function renderDashHeader(inc, exp){
   const h = now.getHours();
   const saud = h < 12 ? SAUDACOES_MANHA[0] : h < 18 ? SAUDACOES_TARDE[0] : SAUDACOES_NOITE[0];
 
-  // Date string
-  const dateStr = now.toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
-  const dateCapitalized = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+  // Date string — manual format to avoid locale issues
+  const DIAS_SEMANA=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+  const MESES_FULL=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const diaSem=DIAS_SEMANA[now.getDay()];
+  const diaMes=now.getDate();
+  const mesNome=MESES_FULL[now.getMonth()];
+  const ano=now.getFullYear();
+  const dateStr=diaSem.charAt(0).toUpperCase()+diaSem.slice(1)+', '+diaMes+' de '+mesNome+' de '+ano;
 
-  // Profile name
+  // Profile name — fallback to Supabase user email
   const prof = JSON.parse(localStorage.getItem('marco_profile') || '{}');
-  const nome = prof.name || '';
+  let nome = prof.name || '';
+  if(!nome && currentUser?.email){
+    nome = currentUser.email.split('@')[0];
+    // Capitalize first letter
+    nome = nome.charAt(0).toUpperCase() + nome.slice(1);
+  }
+  if(!nome && currentUser?.user_metadata?.full_name){
+    nome = currentUser.user_metadata.full_name.split(' ')[0];
+  }
   const greeting = nome ? saud + ', ' + nome + '!' : saud + '!';
 
   // Message based on balance
@@ -2604,7 +2617,7 @@ function renderDashHeader(inc, exp){
   const iconEl = document.getElementById('dh-icon');
 
   try{
-    if(dateEl) dateEl.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+    if(dateEl) dateEl.textContent = dateStr;
     if(greetEl) greetEl.textContent = greeting;
     if(msgEl) msgEl.innerHTML = msg;
     if(iconEl){ iconEl.innerHTML = iconHtml; iconEl.className = 'dh-right ' + iconClass; }

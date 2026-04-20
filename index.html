@@ -1250,7 +1250,7 @@ async function signInWithGoogle(){
   try{
     const {error}=await sb.auth.signInWithOAuth({
       provider:'google',
-      options:{redirectTo: window.location.href}
+      options:{redirectTo: 'https://marcoia.vercel.app'}
     });
     if(error) showAuthMsg('Erro ao entrar com Google: '+error.message);
   }catch(e){
@@ -1270,7 +1270,7 @@ async function signUpWithEmail(){
   const email=document.getElementById('auth-email').value.trim();
   const pass=document.getElementById('auth-pass').value;
   if(!email||pass.length<6){showAuthMsg('Use pelo menos 6 caracteres na senha');return;}
-  const {error}=await sb.auth.signUp({email,password:pass,options:{emailRedirectTo:window.location.href}});
+  const {error}=await sb.auth.signUp({email,password:pass,options:{emailRedirectTo:'https://marcoia.vercel.app'}});
   if(error) showAuthMsg(error.message);
   else showAuthMsg('✓ Verifique seu email para confirmar o cadastro');
 }
@@ -1278,7 +1278,7 @@ async function signUpWithEmail(){
 async function signInWithMagicLink(){
   const email=document.getElementById('auth-email').value.trim();
   if(!email){showAuthMsg('Digite seu email');return;}
-  const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.href}});
+  const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:'https://marcoia.vercel.app'}});
   if(error) showAuthMsg(error.message);
   else showAuthMsg('✓ Link enviado para '+email+' — verifique sua caixa de entrada');
 }

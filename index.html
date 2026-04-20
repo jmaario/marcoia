@@ -1429,14 +1429,14 @@ function showPage(id){
   document.querySelectorAll('.nitem').forEach(i=>{if(i.getAttribute('onclick')?.includes("'"+id+"'"))i.classList.add('active');});
   updateMobNav(id);
   document.querySelector('.main')?.scrollTo(0,0);
-  if(id==='calculadora'){calcJC();}
-  if(id==='dashboard')refreshDashboard();
-  if(id==='despesas'){renderDespesas();renderComps();}
-  if(id==='receitas'){renderReceitas();}
-  if(id==='orcamentos')renderBudgets();
-  if(id==='metas')renderGoals();
-  if(id==='marco')renderMarcoPage();
-  if(id==='relatorio')renderReport();
+  if(id==='dashboard'){refreshDashboard();}
+  else if(id==='despesas'){renderDespesas();renderComps();}
+  else if(id==='receitas'){renderReceitas();}
+  else if(id==='orcamentos'){renderBudgets();}
+  else if(id==='metas'){renderGoals();}
+  else if(id==='marco'){renderMarcoPage();}
+  else if(id==='relatorio'){renderReport();}
+  else if(id==='calculadora'){calcJC();}
 }
 
 // ─── MONTH ─────────────────────────────────────────────
@@ -1444,8 +1444,6 @@ function chMonth(d){
   curMonth+=d;
   if(curMonth>11){curMonth=0;curYear++;}
   if(curMonth<0){curMonth=11;curYear--;}
-  document.getElementById('mdisp').textContent=MONTHS[curMonth]+' '+curYear;
-  document.getElementById('dsub').textContent='Visão geral de '+MONTHS[curMonth]+' '+curYear;
   refreshDashboard();
 }
 
@@ -1461,36 +1459,33 @@ const scXY={
 
 // ─── DASHBOARD ─────────────────────────────────────────
 function refreshDashboard(){
-  // Auto-jump to last month with data if current month is empty and user has data
+  // Auto-jump to last month with data
   const curTxs=state.transactions.filter(t=>txIM(t,curYear,curMonth));
-  if(curTxs.length===0 && state.transactions.length>0){
-    // Find the most recent month that has transactions
+  if(curTxs.length===0&&state.transactions.length>0){
     const sorted=[...state.transactions].sort((a,b)=>new Date(b.date)-new Date(a.date));
     const latest=new Date(sorted[0].date+'T00:00:00');
-    curMonth=latest.getMonth();
-    curYear=latest.getFullYear();
+    curMonth=latest.getMonth();curYear=latest.getFullYear();
   }
-  document.getElementById('mdisp').textContent=MONTHS[curMonth]+' '+curYear;
-  document.getElementById('dsub').textContent='Visão geral de '+MONTHS[curMonth]+' '+curYear;
   const txs=state.transactions.filter(t=>txIM(t,curYear,curMonth));
   const inc=txs.filter(t=>t.type==='in').reduce((a,t)=>a+t.amount,0);
   const exp=txs.filter(t=>t.type==='out').reduce((a,t)=>a+t.amount,0);
-  const mInc=document.getElementById('m-inc');
-  const mExp=document.getElementById('m-exp');
-  if(mInc)mInc.textContent=fmt(inc);
-  if(mExp)mExp.textContent=fmt(exp);
   const bal=inc-exp;
+  // Update elements safely — they may not exist if dashboard is not active page
+  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+  const setHTML=(id,val)=>{const el=document.getElementById(id);if(el)el.innerHTML=val;};
+  set('mdisp',MONTHS[curMonth]+' '+curYear);
+  set('dsub','Visão geral de '+MONTHS[curMonth]+' '+curYear);
+  set('m-inc',fmt(inc));
+  set('m-exp',fmt(exp));
+  set('m-bal',fmt(bal));
+  set('m-ic',txs.filter(t=>t.type==='in').length+' lançamentos');
+  set('m-ec',txs.filter(t=>t.type==='out').length+' lançamentos');
   const balEl=document.getElementById('m-bal');
   const balCard=balEl?balEl.closest('.mc'):null;
-  if(balEl)balEl.textContent=fmt(bal);
-  // dynamic gradient: positive=green, negative=red, zero=neutral
   if(balEl)balEl.className='mv '+(bal>0?'pos':bal<0?'neg':'neu');
   if(balCard)balCard.className='mc '+(bal>0?'pos':bal<0?'neg':'neu');
-  const mIc=document.getElementById('m-ic');
-  const mEc=document.getElementById('m-ec');
-  if(mIc)mIc.textContent=txs.filter(t=>t.type==='in').length+' lançamentos';
-  if(mEc)mEc.textContent=txs.filter(t=>t.type==='out').length+' lançamentos';
-  renderCatChart(txs);renderFlowChart(txs);renderDashTx(txs);renderDashInsights(txs,inc,exp);updateSidebarBadges();renderDashHeader(inc,exp);
+  renderCatChart(txs);renderFlowChart(txs);renderDashTx(txs);
+  renderDashInsights(txs,inc,exp);updateSidebarBadges();renderDashHeader(inc,exp);
 }
 
 function renderCatChart(txs){
@@ -1772,10 +1767,6 @@ function saveTx(){
   state.transactions.push({id:Date.now(),type:curType,desc,amount,cat,date});
   saveState();
   closeTxModal();
-  refreshDashboard();
-  renderDespesas();
-  renderReceitas();
-  // Show dashboard to confirm the entry was saved
   showPage('dashboard');
   toast('Lançamento salvo!');
 }
@@ -1999,9 +1990,9 @@ function renderMarcoPage(){
   if(state.goals.length){const g=[...state.goals].sort((a,b)=>b.current/b.target-a.current/a.target)[0];const pct=Math.round((g.current/g.target)*100);ins.push({type:'ok',icon:SVGS.target,title:`Meta "${g.name}" em ${pct}%`,body:`Faltam ${fmt(g.target-g.current)} para atingir. Você está no caminho certo.`});}
   const topE=Object.entries(cm).sort((a,b)=>b[1]-a[1])[0];
   if(topE)ins.push({icon:SVGS.money,title:`Maior gasto: ${getCat('out',topE[0]).name}`,body:`${fmt(topE[1])} em ${getCat('out',topE[0]).name.toLowerCase()} esse mês.`});
-  document.getElementById('igrid').innerHTML=ins.map(i=>`<div class="icard ${i.type||''}"><div class="iico">${i.icon}</div><div class="iti">${i.title}</div><div class="ibo">${i.body}</div></div>`).join('');
-  if(!document.getElementById('mfc-msgs').children.length){
-    setTimeout(()=>{addMsg('mfc-msgs','marco',`Oi! Esse mês você teve ${fmt(inc)} de receitas e ${fmt(exp)} em gastos. Me pergunta qualquer coisa — estou aqui para ajudar! 👋`);},300);
+  const igridEl=document.getElementById('igrid');if(igridEl)igridEl.innerHTML=ins.map(i=>`<div class="icard ${i.type||''}"><div class="iico">${i.icon}</div><div class="iti">${i.title}</div><div class="ibo">${i.body}</div></div>`).join('');
+  const mfcEl=document.getElementById('mfc-msgs');if(mfcEl&&!mfcEl.children.length){
+    setTimeout(()=>{addMsg('mfc-msgs','marco','Oi! Esse mês você teve '+fmt(inc)+' de receitas e '+fmt(exp)+' em gastos. Me pergunta qualquer coisa — estou aqui para ajudar! 👋');},300);
   }
 }
 

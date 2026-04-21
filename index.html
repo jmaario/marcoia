@@ -931,7 +931,7 @@ body{overflow:hidden auto;}
       <div class="mti">Novo lançamento</div>
       <div class="fg"><label class="fla">Tipo</label><div class="ttog"><button class="tbtn ao" id="tb-out" onclick="setType('out')">Gasto</button><button class="tbtn" id="tb-in" onclick="setType('in')">Receita</button></div></div>
       <div class="fg"><label class="fla">Descrição</label><input type="text" class="finput" id="tx-desc" placeholder="Ex: Supermercado..."></div>
-      <div class="fg"><label class="fla">Valor (R$)</label><input type="number" class="finput" id="tx-amt" placeholder="0,00" step="0.01" min="0"></div>
+      <div class="fg"><label class="fla">Valor (R$)</label><input type="text" inputmode="numeric" class="finput money-input" id="tx-amt" placeholder="0,00" autocomplete="off"></div>
       <div class="fg"><label class="fla">Categoria</label><select class="finput" id="tx-cat"></select></div>
       <div class="fg"><label class="fla">Data</label><input type="date" class="finput" id="tx-dt"></div>
     </div>
@@ -947,7 +947,7 @@ body{overflow:hidden auto;}
       <div class="mob-sheet-handle"></div>
       <div class="mti">Novo orçamento</div>
       <div class="fg"><label class="fla">Categoria</label><select class="finput" id="b-cat"></select></div>
-      <div class="fg"><label class="fla">Limite mensal (R$)</label><input type="number" class="finput" id="b-lim" placeholder="Ex: 800"></div>
+      <div class="fg"><label class="fla">Limite mensal (R$)</label><input type="text" inputmode="numeric" class="finput money-input" id="b-lim" placeholder="0,00" autocomplete="off"></div>
     </div>
     <div class="modal-actions-bar">
       <button class="btn" onclick="closeBModal()">Cancelar</button>
@@ -962,9 +962,9 @@ body{overflow:hidden auto;}
       <div class="mti">Nova meta</div>
       <div class="fg"><label class="fla">Nome</label><input type="text" class="finput" id="g-name" placeholder="Ex: Viagem para Europa"></div>
       <div class="fg"><label class="fla">Ícone</label><select class="finput" id="g-emoji"><option value="goalDefault">⊙ Padrão</option><option value="plane">↗ Viagem</option><option value="shield">◈ Reserva</option><option value="laptop">▭ Tecnologia</option><option value="target">⊚ Meta</option><option value="trend">↗ Investimento</option><option value="money">$ Dinheiro</option></select></div>
-      <div class="fg"><label class="fla">Valor alvo (R$)</label><input type="number" class="finput" id="g-target" placeholder="10000"></div>
-      <div class="fg"><label class="fla">Valor atual (R$)</label><input type="number" class="finput" id="g-cur" value="0"></div>
-      <div class="fg"><label class="fla">Aporte mensal pretendido (R$)</label><input type="number" class="finput" id="g-monthly" placeholder="Ex: 500 (opcional)"></div>
+      <div class="fg"><label class="fla">Valor alvo (R$)</label><input type="text" inputmode="numeric" class="finput money-input" id="g-target" placeholder="0,00" autocomplete="off"></div>
+      <div class="fg"><label class="fla">Valor atual (R$)</label><input type="text" inputmode="numeric" class="finput money-input" id="g-cur" placeholder="0,00" autocomplete="off"></div>
+      <div class="fg"><label class="fla">Aporte mensal pretendido (R$)</label><input type="text" inputmode="numeric" class="finput money-input" id="g-monthly" placeholder="0,00 (opcional)" autocomplete="off"></div>
     </div>
     <div class="modal-actions-bar">
       <button class="btn" onclick="closeGModal()">Cancelar</button>
@@ -1097,7 +1097,7 @@ body{overflow:hidden auto;}
         </div>
       </div>
       <div class="fg"><label class="fla">Nome</label><input type="text" class="finput" id="c-name" placeholder="Ex: Netflix, Financiamento..."></div>
-      <div class="fg"><label class="fla">Valor (R$)</label><input type="number" class="finput" id="c-valor" placeholder="0,00" step="0.01" min="0"></div>
+      <div class="fg"><label class="fla">Valor (R$)</label><input type="text" inputmode="numeric" class="finput money-input" id="c-valor" placeholder="0,00" autocomplete="off"></div>
       <div class="fg"><label class="fla">Dia de vencimento</label><input type="number" class="finput" id="c-venc" placeholder="Ex: 10" min="1" max="31"></div>
       <div id="c-parc-fields" style="display:none;">
         <div class="fg"><label class="fla">Parcelas pagas</label><input type="number" class="finput" id="c-pagas" placeholder="Ex: 3" min="0"></div>
@@ -1770,7 +1770,7 @@ function closeTxModal(){document.getElementById('tx-mod').classList.remove('open
 function setType(t){curType=t;document.getElementById('tb-out').className='tbtn'+(t==='out'?' ao':'');document.getElementById('tb-in').className='tbtn'+(t==='in'?' ai':'');populateTxCat();}
 function populateTxCat(){document.getElementById('tx-cat').innerHTML=(curType==='out'?CO:CI).map(c=>`<option value="${c.id}">${c.name}</option>`).join('');}
 function saveTx(){
-  const desc=document.getElementById('tx-desc').value.trim(),amount=parseFloat(document.getElementById('tx-amt').value),cat=document.getElementById('tx-cat').value,date=document.getElementById('tx-dt').value;
+  const desc=document.getElementById('tx-desc').value.trim(),amount=parseMoney('tx-amt'),cat=document.getElementById('tx-cat').value,date=document.getElementById('tx-dt').value;
   if(!desc||!amount||!date){toast('Preencha todos os campos');return;}
   state.transactions.push({id:Date.now(),type:curType,desc,amount,cat,date});
   saveState();
@@ -1793,7 +1793,7 @@ function renderBudgets(){
 function openBModal(){document.getElementById('b-cat').innerHTML=CO.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');document.getElementById('b-lim').value='';document.getElementById('b-mod').classList.add('open');}
 function closeBModal(){document.getElementById('b-mod').classList.remove('open');}
 function saveBudget(){
-  const cat=document.getElementById('b-cat').value,limit=parseFloat(document.getElementById('b-lim').value);
+  const cat=document.getElementById('b-cat').value,limit=parseMoney('b-lim');
   if(!limit||limit<=0){toast('Valor inválido');return;}
   const i=state.budgets.findIndex(b=>b.cat===cat);
   if(i>=0)state.budgets[i].limit=limit;else state.budgets.push({cat,limit});
@@ -1847,8 +1847,8 @@ function renderGoals(){
 function openGModal(){['g-name','g-target','g-monthly'].forEach(id=>document.getElementById(id).value='');document.getElementById('g-emoji').value='goalDefault';document.getElementById('g-cur').value='0';document.getElementById('g-mod').classList.add('open');setTimeout(()=>document.getElementById('g-name').focus(),100);}
 function closeGModal(){document.getElementById('g-mod').classList.remove('open');}
 function saveGoal(){
-  const name=document.getElementById('g-name').value.trim(),emoji=document.getElementById('g-emoji').value||'goalDefault',target=parseFloat(document.getElementById('g-target').value),current=parseFloat(document.getElementById('g-cur').value)||0;
-  const monthlyTarget=parseFloat(document.getElementById('g-monthly').value)||0;
+  const name=document.getElementById('g-name').value.trim(),emoji=document.getElementById('g-emoji').value||'goalDefault',target=parseMoney('g-target'),current=parseMoney('g-cur');
+  const monthlyTarget=parseMoney('g-monthly');
   if(!name||!target){toast('Preencha nome e valor alvo');return;}
   state.goals.push({id:Date.now(),name,emoji,target,current,monthlyTarget});
   saveState();closeGModal();renderGoals();updateSidebarBadges();toast('Meta criada!');
@@ -2372,7 +2372,7 @@ function closeCompModal(){document.getElementById('comp-mod').classList.remove('
 
 function saveComp(){
   const nome=document.getElementById('c-name').value.trim();
-  const valor=parseFloat(document.getElementById('c-valor').value);
+  const valor=parseMoney('c-valor');
   const venc=parseInt(document.getElementById('c-venc').value);
   const cat=document.getElementById('c-cat').value;
   if(!nome||!valor||!venc){toast('Preencha nome, valor e vencimento');return;}
@@ -2688,6 +2688,39 @@ function importData(input){
   };
   reader.readAsText(file);
 }
+
+// ─── MONEY MASK ────────────────────────────────────────
+function moneyMask(el){
+  // Strip everything except digits
+  let val=el.value.replace(/\D/g,'');
+  if(!val){el.value='';return;}
+  // Convert to cents then format
+  let num=parseInt(val,10);
+  // Cap at 999.999.999,99
+  if(num>99999999999)num=99999999999;
+  let formatted=(num/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  el.value=formatted;
+}
+
+function parseMoney(id){
+  const el=document.getElementById(id);
+  if(!el)return 0;
+  // Remove dots (thousands) and replace comma with dot
+  const val=el.value.replace(/\./g,'').replace(',','.');
+  return parseFloat(val)||0;
+}
+
+// Attach mask to all money inputs on DOM ready
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('.money-input').forEach(el=>{
+    el.addEventListener('input',()=>moneyMask(el));
+    el.addEventListener('focus',()=>{
+      // Move cursor to end
+      const len=el.value.length;
+      setTimeout(()=>el.setSelectionRange(len,len),0);
+    });
+  });
+});
 // ─── INIT ──────────────────────────────────────────────
 // Render date/greeting immediately on load (no auth needed)
 renderDashHeader(0, 0);

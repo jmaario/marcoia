@@ -560,6 +560,13 @@ body{overflow:hidden auto;}
 .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--bd);}
 .auth-email-form{display:flex;flex-direction:column;}
 .auth-msg{font-size:12px;color:var(--err);margin-top:10px;min-height:18px;}
+
+/* ── RELATÓRIO MOBILE ── */
+@media(max-width:768px){
+  .rep-grid{grid-template-columns:1fr !important;}
+  .rep-chart-wrap{height:200px !important;}
+  .rep-chart-sm{height:160px !important;}
+}
 </style>
 </head>
 <body>
@@ -873,11 +880,11 @@ body{overflow:hidden auto;}
   <!-- RELATÓRIO -->
   <div class="page" id="page-relatorio">
     <div class="ptitle">Relatório</div><div class="psub">Análise detalhada das suas finanças</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-      <div class="cc"><div class="ct">Gastos vs receitas — 6 meses</div><div style="position:relative;height:180px;"><canvas id="mChart" role="img" aria-label="Mensal">.</canvas></div></div>
-      <div class="cc"><div class="ct">Top categorias de gasto</div><div style="position:relative;height:180px;"><canvas id="tcChart" role="img" aria-label="Top">.</canvas></div></div>
+    <div class="rep-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+      <div class="cc"><div class="ct">Gastos vs receitas — 6 meses</div><div class="rep-chart-wrap" style="position:relative;height:180px;"><canvas id="mChart" role="img" aria-label="Mensal">.</canvas></div></div>
+      <div class="cc"><div class="ct">Top categorias de gasto</div><div class="rep-chart-wrap" style="position:relative;height:180px;"><canvas id="tcChart" role="img" aria-label="Top">.</canvas></div></div>
     </div>
-    <div class="cc" style="margin-bottom:16px;"><div class="ct">Saldo acumulado</div><div style="position:relative;height:140px;"><canvas id="balChart" role="img" aria-label="Saldo">.</canvas></div></div>
+    <div class="cc" style="margin-bottom:16px;"><div class="ct">Saldo acumulado</div><div class="rep-chart-wrap rep-chart-sm" style="position:relative;height:140px;"><canvas id="balChart" role="img" aria-label="Saldo">.</canvas></div></div>
     <div class="rep-narrative" id="rep-narrative"></div>
     <div class="sh" style="margin-bottom:10px;"><div class="st">Resumo por categoria</div></div>
     <div id="rep-sum" class="blist"></div>

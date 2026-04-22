@@ -1218,31 +1218,34 @@ async function syncToSupabase(){
     console.error('Marco: erro Supabase', error.message, error.code, error.details);
     toast('Erro ao salvar — '+error.message);
   } else {
-    console.log('Marco: dados salvos no Supabase ✓');
+    console.log('Marco: dados salvos ✓ — transações:',state.transactions?.length,'_onbDone:',state._onbDone);
   }
 }
 
 async function loadFromSupabase(){
-  if(!currentUser)return;
+  if(!currentUser){console.warn('Marco: loadFromSupabase sem currentUser');return;}
   try{
+    console.log('Marco: carregando dados do Supabase para',currentUser.id);
     const {data,error}=await sb.from('marco_data')
       .select('data')
       .eq('user_id', currentUser.id)
       .maybeSingle();
-    if(error){console.error('Marco: erro ao carregar dados',error);return;}
+    if(error){console.error('Marco: erro ao carregar dados',error.message);return;}
     if(data?.data){
-      state=JSON.parse(data.data);
+      const loaded=JSON.parse(data.data);
+      console.log('Marco: dados carregados — transações:',loaded.transactions?.length,'_onbDone:',loaded._onbDone);
+      state=loaded;
       if(!state.comprometimentos)state.comprometimentos=[];
       localStorage.setItem('marco_v1',JSON.stringify(state));
-      // Sync onboarding flag from Supabase to localStorage
       if(state._onbDone){
         localStorage.setItem(ONB_KEY, JSON.stringify({synced:true}));
+        console.log('Marco: onboarding marcado como feito');
       }
-      // Sync profile from Supabase to localStorage
       if(state._profile){
         localStorage.setItem('marco_profile', JSON.stringify(state._profile));
       }
     } else {
+      console.log('Marco: nenhum dado no Supabase — usuário novo');
       state={transactions:[],budgets:[],goals:[],comprometimentos:[]};
     }
   }catch(e){console.error('Marco: loadFromSupabase falhou',e);}
@@ -1292,36 +1295,29 @@ function showAuthMsg(msg){
 }
 
 async function initAuth(){
-  let initialized=false;
+  // Simple: check session directly, no listener complexity
+  const {data:{session}}=await sb.auth.getSession();
+  if(session?.user){
+    currentUser=session.user;
+    await onUserLoggedIn();
+  } else {
+    document.getElementById('auth-ov').classList.remove('hidden');
+  }
 
-  // onAuthStateChange also fires INITIAL_SESSION on page load with existing session
+  // Only listen for actual sign in / sign out events after initial check
   sb.auth.onAuthStateChange(async(event,session)=>{
-    if((event==='INITIAL_SESSION'||event==='SIGNED_IN')&&session?.user&&!initialized){
-      initialized=true;
-      currentUser=session.user;
-      await onUserLoggedIn();
+    if(event==='SIGNED_IN'&&session?.user){
+      if(!currentUser||currentUser.id!==session.user.id){
+        currentUser=session.user;
+        await onUserLoggedIn();
+      }
     } else if(event==='SIGNED_OUT'){
-      initialized=false;
       currentUser=null;
       state={transactions:[],budgets:[],goals:[],comprometimentos:[]};
       localStorage.removeItem('marco_v1');
       document.getElementById('auth-ov').classList.remove('hidden');
     }
   });
-
-  // Fallback: if listener doesn't fire within 3s, check session manually
-  setTimeout(async()=>{
-    if(!initialized){
-      const {data:{session}}=await sb.auth.getSession();
-      if(session?.user&&!initialized){
-        initialized=true;
-        currentUser=session.user;
-        await onUserLoggedIn();
-      } else if(!session){
-        document.getElementById('auth-ov').classList.remove('hidden');
-      }
-    }
-  },3000);
 }
 
 async function onUserLoggedIn(){
@@ -1334,6 +1330,13 @@ async function onUserLoggedIn(){
   if(!prof.name&&currentUser?.email){
     prof.name=currentUser.email.split('@')[0];
     localStorage.setItem('marco_profile',JSON.stringify(prof));
+  }
+  // If user has data but no _onbDone flag, mark it now and sync
+  if(!state._onbDone && (state.transactions?.length>0||state.goals?.length>0||state.budgets?.length>0)){
+    console.log('Marco: usuário existente sem _onbDone — marcando e sincronizando');
+    state._onbDone=true;
+    localStorage.setItem(ONB_KEY, JSON.stringify({synced:true}));
+    saveState(); // This will sync to Supabase
   }
   refreshDashboard();
   updateSidebarAvatarFromUser();
@@ -2214,9 +2217,16 @@ const GOAL_CONFIG={
 };
 
 function showOnboarding(){
-  // Check both localStorage AND state (loaded from Supabase)
+  // Already done this session
   if(localStorage.getItem(ONB_KEY))return;
+  // Flag saved in Supabase state
   if(state._onbDone)return;
+  // If user already has data, they've been here before — skip onboarding
+  if(state.transactions.length>0||state.goals.length>0||state.budgets.length>0){
+    localStorage.setItem(ONB_KEY, JSON.stringify({synced:true}));
+    state._onbDone=true;
+    return;
+  }
   document.getElementById('onb-ov').classList.remove('hidden');
   setTimeout(()=>document.getElementById('onb-name').focus(),200);
 }

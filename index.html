@@ -1285,22 +1285,27 @@ function showAuthMsg(msg){
 }
 
 async function initAuth(){
-  // Listen first, then check session — avoids race condition
+  // Check existing session first
+  const {data:{session}}=await sb.auth.getSession();
+  if(session?.user){
+    currentUser=session.user;
+    await onUserLoggedIn();
+  } else {
+    document.getElementById('auth-ov').classList.remove('hidden');
+  }
+
+  // Listen for future auth changes (login/logout only)
   sb.auth.onAuthStateChange(async(event,session)=>{
-    if(session?.user){
+    if(event==='SIGNED_IN'&&session?.user&&!currentUser){
       currentUser=session.user;
       await onUserLoggedIn();
-    } else {
+    } else if(event==='SIGNED_OUT'){
       currentUser=null;
+      state={transactions:[],budgets:[],goals:[],comprometimentos:[]};
+      localStorage.removeItem('marco_v1');
       document.getElementById('auth-ov').classList.remove('hidden');
     }
   });
-
-  // Check existing session
-  const {data:{session}}=await sb.auth.getSession();
-  if(!session){
-    document.getElementById('auth-ov').classList.remove('hidden');
-  }
 }
 
 async function onUserLoggedIn(){
@@ -1629,16 +1634,28 @@ function renderDashInsights(txs, inc, exp){
     });
   }
 
-  // 3. SALDO POSITIVO E PROJEÇÃO ATÉ FIM DO MÊS
-  if(bal>0&&isCurrentMonth&&daysLeft>0&&dayOfMonth>0){
+  // 3. SALDO POSITIVO — SUGESTÃO REALISTA DE QUANTO GUARDAR
+  if(bal>0&&inc>0&&isCurrentMonth&&daysLeft>0&&dayOfMonth>0){
     const dailyAvg=exp/dayOfMonth;
     const projected=exp+(dailyAvg*daysLeft);
     const projectedBal=inc-projected;
+    const taxaGuardado=Math.round((bal/inc)*100);
+    // Suggest saving 10-20% of income, not 100% of balance
+    const meta10=Math.round(inc*0.10);
+    const meta20=Math.round(inc*0.20);
     if(projectedBal>0){
+      let saveText='';
+      if(taxaGuardado>=20){
+        saveText=`Você está guardando ${taxaGuardado}% da renda este mês — acima da meta de 20%. Excelente disciplina!`;
+      } else if(taxaGuardado>=10){
+        saveText=`Você está guardando ${taxaGuardado}% da renda. Boa! A meta ideal é chegar a 20% (${fmt(meta20)}/mês).`;
+      } else if(bal>0){
+        saveText=`Projeção de ${fmt(Math.round(projectedBal))} sobrando. Uma meta realista é guardar 10-20% da renda (${fmt(meta10)}–${fmt(meta20)}) — não precisa ser tudo.`;
+      }
       insights.push({
         type:'pos',icon:SVGS.trend,
         title:`No ritmo atual, você fecha positivo`,
-        text:`Projeção: ${fmt(Math.round(projected))} de gastos até o fim do mês. Saldo estimado de ${fmt(Math.round(projectedBal))}.`,
+        text:saveText,
         badge:'Ver relatório',badgeType:'pos',action:"showPage('relatorio')",
       });
     }
@@ -1690,14 +1707,30 @@ function renderDashInsights(txs, inc, exp){
     }
   }
 
-  // 7. SALDO NEGATIVO — ALERTA
+  // 7. SALDO NEGATIVO — ALERTA EMPÁTICO
   if(bal<0){
+    const taxaGasto=inc>0?Math.round((exp/inc)*100):0;
     insights.push({
       type:'neg',icon:SVGS.negative,
       title:`Gastos acima das receitas este mês`,
-      text:`Você está ${fmt(Math.abs(bal))} no negativo. Revise seus lançamentos e corte o que for possível.`,
-      badge:'Ver lançamentos',badgeType:'neg',action:"showPage('despesas')",
+      text:`Você comprometeu ${taxaGasto>0?taxaGasto+'% da renda':fmt(Math.abs(bal))+' a mais do que ganhou'}. Identifique os maiores gastos e veja o que pode adiar ou reduzir — pequenos cortes já fazem diferença.`,
+      badge:'Ver despesas',badgeType:'neg',action:"showPage('despesas')",
     });
+  }
+
+  // 7b. TAXA DE COMPROMETIMENTO ALTA (>85%)
+  if(inc>0&&isCurrentMonth){
+    const taxa=Math.round((exp/inc)*100);
+    const compFixo=state.comprometimentos.filter(c=>c.ativa!==false).reduce((a,c)=>a+c.valor,0);
+    const pctFixo=inc>0?Math.round((compFixo/inc)*100):0;
+    if(taxa>=85&&taxa<100&&bal>=0&&insights.length<3){
+      insights.push({
+        type:'warn',icon:SVGS.warn,
+        title:`${taxa}% da renda já comprometida`,
+        text:`Você tem ${fmt(inc-exp)} sobrando — mas seus compromissos fixos consomem ${fmt(compFixo)}/mês (${pctFixo}% da renda). Sobra pouco espaço para emergências.`,
+        badge:'Ver despesas',badgeType:'warn',action:"showPage('despesas')",
+      });
+    }
   }
 
   // 8. CATEGORIA SEM ORÇAMENTO COM GASTO ALTO
@@ -1828,7 +1861,11 @@ function renderGoals(){
       const mCount=Math.ceil(rem/monthly);
       const projDate=new Date();projDate.setMonth(projDate.getMonth()+mCount);
       const projStr=projDate.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-      projHtml='<div class="gproj">No ritmo atual, você atinge em <strong>'+mCount+(mCount===1?' mês':' meses')+'</strong> — por volta de <strong>'+projStr+'</strong>.</div>';
+      // Use 10-20% of income as realistic monthly saving if no explicit aporte
+      const realisticMonthly = g.monthlyTarget || (avgSav > 0 ? Math.min(avgSav, avgSav) : 0);
+      const saveRate = inc > 0 ? Math.round((realisticMonthly/inc)*100) : 0;
+      const rateNote = saveRate > 0 ? ' (guardando ~'+saveRate+'% da renda)' : '';
+      projHtml='<div class="gproj">No ritmo atual'+rateNote+', você atinge em <strong>'+mCount+(mCount===1?' mês':' meses')+'</strong> — por volta de <strong>'+projStr+'</strong>.</div>';
     } else {
       projHtml='<div class="gproj">Adicione aportes para ver a projeção desta meta.</div>';
     }
@@ -2161,7 +2198,9 @@ const GOAL_CONFIG={
 };
 
 function showOnboarding(){
+  // Check both localStorage AND state (loaded from Supabase)
   if(localStorage.getItem(ONB_KEY))return;
+  if(state._onbDone)return;
   document.getElementById('onb-ov').classList.remove('hidden');
   setTimeout(()=>document.getElementById('onb-name').focus(),200);
 }
@@ -2190,6 +2229,8 @@ function finishOnb(){
   const profile={name:onbUserName||'você',goal:onbSelectedGoal||'controle'};
   localStorage.setItem(ONB_KEY, JSON.stringify(profile));
   localStorage.setItem('marco_profile', JSON.stringify(profile));
+  state._onbDone = true;
+  saveState();
 
   // Apply goal: update uname, seed goal if needed
   if(onbUserName){
@@ -2217,6 +2258,8 @@ function finishOnb(){
 
 function skipOnb(){
   localStorage.setItem(ONB_KEY, JSON.stringify({name:'você',goal:'controle'}));
+  state._onbDone = true;
+  saveState();
   document.getElementById('onb-ov').classList.add('hidden');
   refreshDashboard();
 }
@@ -2551,20 +2594,20 @@ const SAUDACOES_TARDE = ['Boa tarde'];
 const SAUDACOES_NOITE = ['Boa noite'];
 
 const MSGS_POS = [
-  'Seu saldo está positivo. Continue assim!',
-  'Você está no caminho certo este mês.',
-  'Pequenas ações geram grandes resultados.',
-  'Sua consistência está fazendo a diferença.',
+  'Mês positivo. Que tal separar 10-20% do saldo para sua reserva?',
+  'Você está no azul. Consistência é o que faz a diferença no longo prazo.',
+  'Saldo positivo! Mesmo R$100 guardados por mês já constroem algo.',
+  'Bom controle este mês. Um pequeno aporte na meta vale mais do que parece.',
 ];
 const MSGS_NEG = [
-  'Seus gastos estão acima das receitas. Vamos revisar?',
-  'Atenção: você está no negativo este mês.',
-  'Hora de apertar o cinto — seus gastos estão altos.',
+  'Gastos acima das receitas. Identifique o que pode ser cortado ou adiado.',
+  'Mês desafiador — isso acontece. O importante é entender o que pesou.',
+  'Atenção: seus gastos superaram a renda. Pequenos ajustes já fazem diferença.',
 ];
 const MSGS_NEU = [
-  'Registre suas receitas e gastos para começar.',
-  'Adicione seus lançamentos para o Marco analisar.',
-  'Comece registrando sua primeira receita do mês.',
+  'Registre suas receitas e gastos para o Marco te ajudar de verdade.',
+  'Adicione seus lançamentos — quanto mais dados, melhores os insights.',
+  'Comece pelo básico: registre sua renda e seus gastos fixos do mês.',
 ];
 
 const ICONS_POS = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3 17l5-5 4 4 9-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 8h4v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -2614,16 +2657,20 @@ function renderDashHeader(inc, exp){
 
   // Goal-aware message override
   const goal = prof.goal;
+  const meta10 = inc > 0 ? Math.round(inc * 0.10) : 0;
+  const meta20 = inc > 0 ? Math.round(inc * 0.20) : 0;
   if(goal === 'divida' && bal >= 0 && inc > 0){
-    msg = 'Você tem <strong>' + fmt(bal) + '</strong> disponível para quitar dívidas este mês.';
-  } else if(goal === 'reserva' && bal > 0){
-    msg = 'Você pode guardar <strong>' + fmt(bal) + '</strong> na sua reserva este mês.';
-  } else if(goal === 'investir' && bal > 0){
-    msg = '<strong>' + fmt(bal) + '</strong> disponíveis para investir este mês.';
+    const sugestao = Math.min(bal, Math.round(inc * 0.30));
+    msg = 'Separe até <strong>' + fmt(sugestao) + '</strong> para quitar dívidas este mês — sem comprometer o básico.';
+  } else if(goal === 'reserva' && bal > 0 && inc > 0){
+    msg = 'Meta realista: guardar <strong>' + fmt(meta20) + '</strong> (20% da renda) na sua reserva este mês.';
+  } else if(goal === 'investir' && bal > 0 && inc > 0){
+    msg = 'Uma meta realista é investir entre <strong>' + fmt(meta10) + '</strong> e <strong>' + fmt(meta20) + '</strong> este mês.';
   } else if((goal === 'meta' || goal === 'controle') && bal > 0 && state.goals.length){
     const g = state.goals[0];
     const rem = Math.max(0, g.target - g.current);
-    if(rem > 0) msg = 'Com o saldo atual, você avança <strong>' + fmt(Math.min(bal, rem)) + '</strong> na meta "' + g.name + '".';
+    const aporteRealista = meta10;
+    if(rem > 0 && aporteRealista > 0) msg = 'Para a meta "' + g.name + '", um aporte realista é <strong>' + fmt(aporteRealista) + '/mês</strong> — faltam ' + fmt(rem) + '.';
   }
 
   const dateEl = document.getElementById('dh-date');

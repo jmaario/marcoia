@@ -1285,27 +1285,36 @@ function showAuthMsg(msg){
 }
 
 async function initAuth(){
-  // Check existing session first
-  const {data:{session}}=await sb.auth.getSession();
-  if(session?.user){
-    currentUser=session.user;
-    await onUserLoggedIn();
-  } else {
-    document.getElementById('auth-ov').classList.remove('hidden');
-  }
+  let initialized=false;
 
-  // Listen for future auth changes (login/logout only)
+  // onAuthStateChange also fires INITIAL_SESSION on page load with existing session
   sb.auth.onAuthStateChange(async(event,session)=>{
-    if(event==='SIGNED_IN'&&session?.user&&!currentUser){
+    if((event==='INITIAL_SESSION'||event==='SIGNED_IN')&&session?.user&&!initialized){
+      initialized=true;
       currentUser=session.user;
       await onUserLoggedIn();
     } else if(event==='SIGNED_OUT'){
+      initialized=false;
       currentUser=null;
       state={transactions:[],budgets:[],goals:[],comprometimentos:[]};
       localStorage.removeItem('marco_v1');
       document.getElementById('auth-ov').classList.remove('hidden');
     }
   });
+
+  // Fallback: if listener doesn't fire within 3s, check session manually
+  setTimeout(async()=>{
+    if(!initialized){
+      const {data:{session}}=await sb.auth.getSession();
+      if(session?.user&&!initialized){
+        initialized=true;
+        currentUser=session.user;
+        await onUserLoggedIn();
+      } else if(!session){
+        document.getElementById('auth-ov').classList.remove('hidden');
+      }
+    }
+  },3000);
 }
 
 async function onUserLoggedIn(){

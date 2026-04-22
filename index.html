@@ -1005,7 +1005,7 @@ body{overflow:hidden auto;}
   </div>
 </div>
 <!-- ONBOARDING -->
-<div class="onb-ov" id="onb-ov">
+<div class="onb-ov hidden" id="onb-ov">
   <div class="onb">
     <div class="onb-logo">
       <svg width="22" height="20" viewBox="0 0 56 50" fill="none">
@@ -2217,17 +2217,20 @@ const GOAL_CONFIG={
 };
 
 function showOnboarding(){
+  const el=document.getElementById('onb-ov');
   // Already done this session
-  if(localStorage.getItem(ONB_KEY))return;
+  if(localStorage.getItem(ONB_KEY)){el.classList.add('hidden');return;}
   // Flag saved in Supabase state
-  if(state._onbDone)return;
-  // If user already has data, they've been here before — skip onboarding
+  if(state._onbDone){el.classList.add('hidden');return;}
+  // If user already has data, they've been here before — skip
   if(state.transactions.length>0||state.goals.length>0||state.budgets.length>0){
     localStorage.setItem(ONB_KEY, JSON.stringify({synced:true}));
     state._onbDone=true;
+    el.classList.add('hidden');
     return;
   }
-  document.getElementById('onb-ov').classList.remove('hidden');
+  // New user — show onboarding
+  el.classList.remove('hidden');
   setTimeout(()=>document.getElementById('onb-name').focus(),200);
 }
 

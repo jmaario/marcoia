@@ -2410,24 +2410,38 @@ function renderComps(){
         +'</div>';
     }
 
+    const pct2=c.tipo==='parcelamento'?Math.round(((c.pagas||0)/(c.total||1))*100):0;
     return '<div class="'+cardClass+'">'
+      // Main row
       +'<div class="comp-row">'
-      +'<div class="comp-ico '+icoClass+'">'+ico+'</div>'
-      +'<div class="comp-main">'
-      +'<div class="comp-name">'+c.nome+'</div>'
-      +'<div class="comp-meta">'+detalhes+'</div>'
+        +'<div class="comp-ico '+icoClass+'">'+ico+'</div>'
+        +'<div class="comp-main">'
+          +'<div class="comp-name">'+c.nome+'</div>'
+          +'<div class="comp-meta">'+detalhes+'</div>'
+        +'</div>'
+        +'<div class="comp-right">'
+          +'<div class="comp-valor">'+fmt(c.valor)+'</div>'
+          +'<span class="comp-badge '+badge.cls+'">'+badge.txt+'</span>'
+        +'</div>'
       +'</div>'
-      +'<div class="comp-right">'
-      +'<div class="comp-valor">'+fmt(c.valor)+'</div>'
-      +'<div class="comp-badge '+badge.cls+'">'+badge.txt+'</div>'
-      +'</div>'
-      +'</div>'
-      +progressHtml
+      // Progress bar (parcelamentos only)
+      +(c.tipo==='parcelamento'
+        ?'<div class="comp-progress-wrap">'
+          +'<div class="comp-progress-info">'
+            +'<span>'+(c.pagas||0)+'/'+c.total+' parcelas pagas</span>'
+            +'<span class="comp-progress-pct">'+pct2+'%</span>'
+          +'</div>'
+          +'<div class="pbg"><div class="pf" style="width:'+pct2+'%;background:rgba(99,163,242,.75);"></div></div>'
+        +'</div>'
+        :'')
+      // Actions
       +'<div class="comp-actions">'
-      +(c.tipo==='parcelamento'&&c.pagas<c.total?'<button class="btn sm" onclick="pagarParcela('+globalIdx+')">Registrar parcela</button>':'')
-      +'<button class="btn sm danger" onclick="removeComp('+globalIdx+')" style="margin-left:auto;">Remover</button>'
+        +(c.tipo==='parcelamento'&&(c.pagas||0)<(c.total||1)
+          ?'<button class="btn sm" onclick="pagarParcela('+globalIdx+')">✓ Registrar parcela</button>'
+          :'')
+        +'<button class="btn sm danger" onclick="removeComp('+globalIdx+')" style="margin-left:auto;">Remover</button>'
       +'</div>'
-      +'</div>';
+    +'</div>';
   }).join('');
 }
 

@@ -2363,12 +2363,13 @@ function renderComps(){
   const totalMes=ativos.reduce((a,c)=>a+c.valor,0);
   const totalAssin=assin.reduce((a,c)=>a+c.valor,0);
   const totalParc=parc.reduce((a,c)=>a+c.valor,0);
-  document.getElementById('cs-total').textContent=fmt(totalMes);
-  document.getElementById('cs-count').textContent=ativos.length+' compromisso'+(ativos.length!==1?'s':'');
-  document.getElementById('cs-assin').textContent=fmt(totalAssin);
-  document.getElementById('cs-assin-count').textContent=assin.length+' ativa'+(assin.length!==1?'s':'');
-  document.getElementById('cs-parc').textContent=fmt(totalParc);
-  document.getElementById('cs-parc-count').textContent=parc.length+' em aberto';
+  const setT=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  setT('cs-total',fmt(totalMes));
+  setT('cs-count',ativos.length+' compromisso'+(ativos.length!==1?'s':''));
+  setT('cs-assin',fmt(totalAssin));
+  setT('cs-assin-count',assin.length+' ativa'+(assin.length!==1?'s':''));
+  setT('cs-parc',fmt(totalParc));
+  setT('cs-parc-count',parc.length+' em aberto');
 
   // Sidebar badge
   const sbComp=document.getElementById('sb-comp');
@@ -2461,6 +2462,8 @@ function saveComp(){
   saveState();
   closeCompModal();
   renderComps();
+  renderDespesas();
+  refreshDashboard();
   toast(nome+' adicionado');
 }
 
@@ -2472,12 +2475,16 @@ function pagarParcela(i){
   else toast('Parcela '+(c.pagas)+'/'+c.total+' registrada');
   saveState();
   renderComps();
+  renderDespesas();
+  refreshDashboard();
 }
 
 function removeComp(i){
   state.comprometimentos.splice(i,1);
   saveState();
   renderComps();
+  renderDespesas();
+  refreshDashboard();
   toast('Removido');
 }
 

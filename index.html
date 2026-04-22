@@ -1234,8 +1234,15 @@ async function loadFromSupabase(){
       state=JSON.parse(data.data);
       if(!state.comprometimentos)state.comprometimentos=[];
       localStorage.setItem('marco_v1',JSON.stringify(state));
+      // Sync onboarding flag from Supabase to localStorage
+      if(state._onbDone){
+        localStorage.setItem(ONB_KEY, JSON.stringify({synced:true}));
+      }
+      // Sync profile from Supabase to localStorage
+      if(state._profile){
+        localStorage.setItem('marco_profile', JSON.stringify(state._profile));
+      }
     } else {
-      // Novo usuário — estado vazio
       state={transactions:[],budgets:[],goals:[],comprometimentos:[]};
     }
   }catch(e){console.error('Marco: loadFromSupabase falhou',e);}
@@ -2239,6 +2246,7 @@ function finishOnb(){
   localStorage.setItem(ONB_KEY, JSON.stringify(profile));
   localStorage.setItem('marco_profile', JSON.stringify(profile));
   state._onbDone = true;
+  state._profile = profile;
   saveState();
 
   // Apply goal: update uname, seed goal if needed
@@ -2266,8 +2274,11 @@ function finishOnb(){
 }
 
 function skipOnb(){
-  localStorage.setItem(ONB_KEY, JSON.stringify({name:'você',goal:'controle'}));
+  const skipProfile={name:'você',goal:'controle'};
+  localStorage.setItem(ONB_KEY, JSON.stringify(skipProfile));
+  localStorage.setItem('marco_profile', JSON.stringify(skipProfile));
   state._onbDone = true;
+  state._profile = skipProfile;
   saveState();
   document.getElementById('onb-ov').classList.add('hidden');
   refreshDashboard();

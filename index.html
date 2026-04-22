@@ -1338,6 +1338,7 @@ async function onUserLoggedIn(){
     localStorage.setItem(ONB_KEY, JSON.stringify({synced:true}));
     saveState(); // This will sync to Supabase
   }
+  autoLancarComprometimentos();
   refreshDashboard();
   updateSidebarAvatarFromUser();
   showOnboarding();
@@ -2808,6 +2809,78 @@ document.addEventListener('DOMContentLoaded',()=>{
     });
   });
 });
+
+// ─── AUTO-LANÇAMENTO DE COMPROMETIMENTOS ───────────────
+function autoLancarComprometimentos(){
+  const hoje = new Date();
+  const anoAtual = hoje.getFullYear();
+  const mesAtual = hoje.getMonth();
+  const diaAtual = hoje.getDate();
+  let novos = [];
+
+  state.comprometimentos.forEach((c, i) => {
+    if(c.ativa === false) return;
+
+    // Verifica se já foi lançado este mês
+    const jaLancado = state.transactions.some(t =>
+      t._compId === c.id &&
+      txIM(t, anoAtual, mesAtual)
+    );
+    if(jaLancado) return;
+
+    // Só lança se o dia de vencimento já chegou ou passou este mês
+    if(diaAtual < c.venc) return;
+
+    // Cria a transação automaticamente
+    const d = `${anoAtual}-${String(mesAtual+1).padStart(2,'0')}-${String(c.venc).padStart(2,'0')}`;
+    const tx = {
+      id: Date.now() + Math.random(),
+      type: 'out',
+      desc: c.nome,
+      amount: c.valor,
+      cat: mapCompCat(c.cat),
+      date: d,
+      _compId: c.id,
+      _auto: true,
+    };
+    state.transactions.push(tx);
+    novos.push(c.nome);
+
+    // Parcelamento: incrementa parcelas pagas
+    if(c.tipo === 'parcelamento'){
+      c.pagas = (c.pagas || 0) + 1;
+      if(c.pagas >= c.total){
+        c.ativa = false;
+      }
+    }
+  });
+
+  if(novos.length > 0){
+    saveState();
+    const msg = novos.length === 1
+      ? `"${novos[0]}" lançado automaticamente nas despesas`
+      : `${novos.length} comprometimentos lançados automaticamente`;
+    toast(msg);
+    refreshDashboard();
+    renderDespesas();
+    renderComps();
+  }
+}
+
+// Mapeia categoria do comprometimento para categoria de gasto
+function mapCompCat(cat){
+  const map = {
+    streaming: 'lazer',
+    software: 'lazer',
+    saude: 'saude',
+    educacao: 'educacao',
+    financiamento: 'dividas',
+    cartao: 'dividas',
+    veiculo: 'transporte',
+    outro: 'outros',
+  };
+  return map[cat] || 'outros';
+}
 // ─── INIT ──────────────────────────────────────────────
 // Render date/greeting immediately on load (no auth needed)
 renderDashHeader(0, 0);

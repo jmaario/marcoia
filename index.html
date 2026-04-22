@@ -567,6 +567,39 @@ body{overflow:hidden auto;}
   .rep-chart-wrap{height:200px !important;}
   .rep-chart-sm{height:160px !important;}
 }
+
+/* ── COMPROMETIMENTOS ── */
+.comp-grid{display:flex;flex-direction:column;gap:8px;}
+.comp-card{background:rgba(17,17,20,.7);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--bd);border-radius:var(--r);padding:14px 16px;transition:border-color .2s;position:relative;overflow:hidden;}
+.comp-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--bd2),transparent);}
+.comp-card:hover{border-color:var(--bd2);}
+.comp-card.vence-hoje{border-color:rgba(240,79,79,.3);box-shadow:0 0 20px rgba(240,79,79,.05) inset;}
+.comp-card.vence-semana{border-color:rgba(232,184,48,.25);}
+.comp-row{display:flex;align-items:center;gap:11px;}
+.comp-ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.comp-ico.assinatura{background:rgba(170,140,240,.12);color:rgba(170,140,240,.9);}
+.comp-ico.parcelamento{background:rgba(99,163,242,.12);color:rgba(99,163,242,.9);}
+.comp-main{flex:1;min-width:0;}
+.comp-name{font-size:13px;font-weight:500;color:var(--w1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.comp-meta{font-size:11px;color:var(--g3);margin-top:1px;}
+.comp-right{display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;gap:3px;}
+.comp-valor{font-size:14px;font-weight:600;font-family:var(--mono);color:var(--w);white-space:nowrap;}
+.comp-badge{font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;white-space:nowrap;}
+.comp-badge.ok{background:rgba(61,202,114,.12);color:var(--ok);}
+.comp-badge.warn{background:rgba(232,184,48,.12);color:var(--warn);}
+.comp-badge.err{background:rgba(240,79,79,.12);color:var(--err);}
+.comp-badge.neu{background:var(--glass2);color:var(--g3);}
+.comp-progress-wrap{margin-top:10px;}
+.comp-progress-info{display:flex;justify-content:space-between;font-size:10px;color:var(--g2);margin-bottom:4px;}
+.comp-progress-pct{font-weight:500;}
+.comp-actions{display:flex;align-items:center;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--bd);}
+.comp-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;}
+.comp-sum-card{background:var(--glass);border:1px solid var(--bd);border-radius:var(--r);padding:14px 16px;}
+.comp-sum-lbl{font-size:10px;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+.comp-sum-val{font-size:18px;font-weight:600;font-family:var(--mono);color:var(--w);}
+.comp-sum-sub{font-size:11px;color:var(--g2);margin-top:3px;}
+.comp-empty{text-align:center;padding:40px 24px;}
+@media(max-width:768px){.comp-summary{grid-template-columns:1fr 1fr;}}
 </style>
 </head>
 <body>

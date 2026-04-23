@@ -1941,7 +1941,29 @@ function saveGoal(){
   state.goals.push({id:Date.now(),name,emoji,target,current,monthlyTarget});
   saveState();closeGModal();renderGoals();updateSidebarBadges();toast('Meta criada!');
 }
-function addGoal(i){const v=parseFloat(prompt('Quanto você guardou? (R$)'));if(!v||isNaN(v))return;state.goals[i].current=Math.min(state.goals[i].target,state.goals[i].current+v);saveState();renderGoals();toast('Meta atualizada');}
+function addGoal(i){
+  const v=parseFloat(prompt('Quanto você guardou? (R$)'));
+  if(!v||isNaN(v))return;
+  const g=state.goals[i];
+  // Update goal balance
+  g.current=Math.min(g.target,g.current+v);
+  // Register as a transaction (debit from current month)
+  const today=new Date();
+  const dateStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  state.transactions.push({
+    id:Date.now(),
+    type:'out',
+    desc:'Meta: '+g.name,
+    amount:v,
+    cat:'outros',
+    date:dateStr,
+    _goalId:g.id,
+  });
+  saveState();
+  renderGoals();
+  refreshDashboard();
+  toast('R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2})+' adicionado à meta e descontado do saldo');
+}
 function delGoal(i){state.goals.splice(i,1);saveState();renderGoals();toast('Removido');}
 
 // ─── REPORT ────────────────────────────────────────────

@@ -1913,7 +1913,8 @@ function renderGoals(){
       const projStr=projDate.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
       // Use 10-20% of income as realistic monthly saving if no explicit aporte
       const realisticMonthly = g.monthlyTarget || (avgSav > 0 ? Math.min(avgSav, avgSav) : 0);
-      const saveRate = inc > 0 ? Math.round((realisticMonthly/inc)*100) : 0;
+      const incNow = state.transactions.filter(t=>txIM(t,curYear,curMonth)&&t.type==='in').reduce((a,t)=>a+t.amount,0);
+      const saveRate = incNow > 0 ? Math.round((realisticMonthly/incNow)*100) : 0;
       const rateNote = saveRate > 0 ? ' (guardando ~'+saveRate+'% da renda)' : '';
       projHtml='<div class="gproj">No ritmo atual'+rateNote+', você atinge em <strong>'+mCount+(mCount===1?' mês':' meses')+'</strong> — por volta de <strong>'+projStr+'</strong>.</div>';
     } else {

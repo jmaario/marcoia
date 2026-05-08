@@ -2236,35 +2236,35 @@ const GOAL_CONFIG={
   divida:{
     label:'Sair das dívidas',
     psub:'Foco em quitar o que deve antes de qualquer coisa.',
-    marcoTone:'Você está focado em sair das dívidas. Seja direto sobre cortes e priorize o pagamento de débitos antes de qualquer outra coisa.',
+    marcoTone:'Dívida não é normal. Pare de fingir que é. Corte o que for preciso e coloque cada real sobrando para matar essa dívida. Sem desculpa.',
     seedGoal:{name:'Quitar dívidas',emoji:'shield',target:5000,current:500},
     suggestBudget:true,
   },
   reserva:{
     label:'Construir reserva',
     psub:'Segurança financeira em primeiro lugar.',
-    marcoTone:'Você quer construir uma reserva de emergência. Incentive guardar consistentemente e alerte quando os gastos comprometam essa meta.',
+    marcoTone:'Reserva de emergência não é opcional. Sem ela, qualquer problema vira catástrofe. Guarda primeiro, vive com o resto. Não tem outra ordem.',
     seedGoal:{name:'Reserva de emergência',emoji:'shield',target:15000,current:0},
     suggestBudget:false,
   },
   meta:{
     label:'Realizar uma conquista',
     psub:'Cada real guardado é um passo para o seu objetivo.',
-    marcoTone:'Você está guardando para realizar algo especial. Mostre o progresso das metas com entusiasmo e conecte os gastos ao impacto na meta.',
+    marcoTone:'Cada real que você gasta à toa é um dia a mais longe do seu objetivo. Mostra o número real, sem romantizar. Progresso ou estagnação — escolha.',
     seedGoal:{name:'Minha conquista',emoji:'plane',target:10000,current:0},
     suggestBudget:false,
   },
   controle:{
     label:'Ter controle do dinheiro',
     psub:'Visibilidade total antes de qualquer decisão.',
-    marcoTone:'Você quer entender para onde o dinheiro vai. Seja analítico, destaque padrões de gasto e sugira orçamentos por categoria.',
+    marcoTone:'A maioria das pessoas acha que sabe onde gasta. Não sabe. Mostre os padrões reais sem suavizar. Dado feio é dado verdadeiro.',
     seedGoal:null,
     suggestBudget:true,
   },
   investir:{
     label:'Começar a investir',
     psub:'Construindo patrimônio no longo prazo.',
-    marcoTone:'Você quer fazer o dinheiro trabalhar por você. Destaque o quanto sobra para investir todo mês e mostre o poder dos juros compostos.',
+    marcoTone:'Dinheiro parado em conta corrente é dinheiro que você está jogando fora. Mostre o custo real de não investir. Sem drama, com número.',
     seedGoal:{name:'Carteira de investimentos',emoji:'trend',target:50000,current:0},
     suggestBudget:false,
   },
@@ -2702,20 +2702,20 @@ const SAUDACOES_TARDE = ['Boa tarde'];
 const SAUDACOES_NOITE = ['Boa noite'];
 
 const MSGS_POS = [
-  'Mês positivo. Que tal separar 10-20% do saldo para sua reserva?',
-  'Você está no azul. Consistência é o que faz a diferença no longo prazo.',
-  'Saldo positivo! Mesmo R$100 guardados por mês já constroem algo.',
-  'Bom controle este mês. Um pequeno aporte na meta vale mais do que parece.',
+  'Saldo positivo. Agora guarda antes de gastar — senão some igual todo mês.',
+  'Você está no azul. A pergunta é: quanto disso vai virar reserva de verdade?',
+  'Fechou bem. Mas "fechar bem" e "construir patrimônio" são coisas diferentes.',
+  'Bom mês. Não comemora ainda — vê quanto guardou de fato.',
 ];
 const MSGS_NEG = [
-  'Gastos acima das receitas. Identifique o que pode ser cortado ou adiado.',
-  'Mês desafiador — isso acontece. O importante é entender o que pesou.',
-  'Atenção: seus gastos superaram a renda. Pequenos ajustes já fazem diferença.',
+  'Você gastou mais do que ganhou. Isso não é azar, é escolha. Revisa.',
+  'Saldo negativo. Alguma coisa precisava ter sido cortada. Qual foi?',
+  'Mês no vermelho. O problema não é a renda — é a prioridade.',
 ];
 const MSGS_NEU = [
-  'Registre suas receitas e gastos para o Marco te ajudar de verdade.',
-  'Adicione seus lançamentos — quanto mais dados, melhores os insights.',
-  'Comece pelo básico: registre sua renda e seus gastos fixos do mês.',
+  'Sem dados, sem diagnóstico. Registra o que ganha e o que gasta.',
+  'O Marco não adivinha. Coloca os números aqui.',
+  'Começa pelo básico: quanto você ganhou e quanto você gastou.',
 ];
 
 const ICONS_POS = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3 17l5-5 4 4 9-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 8h4v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -2769,16 +2769,15 @@ function renderDashHeader(inc, exp){
   const meta20 = inc > 0 ? Math.round(inc * 0.20) : 0;
   if(goal === 'divida' && bal >= 0 && inc > 0){
     const sugestao = Math.min(bal, Math.round(inc * 0.30));
-    msg = 'Separe até <strong>' + fmt(sugestao) + '</strong> para quitar dívidas este mês — sem comprometer o básico.';
+    msg = 'Sobrou <strong>' + fmt(bal) + '</strong>. Vai para a dívida agora — não amanhã.';
   } else if(goal === 'reserva' && bal > 0 && inc > 0){
-    msg = 'Meta realista: guardar <strong>' + fmt(meta20) + '</strong> (20% da renda) na sua reserva este mês.';
+    msg = 'Guarda <strong>' + fmt(meta20) + '</strong> hoje. Se esperar o fim do mês, não vai sobrar.';
   } else if(goal === 'investir' && bal > 0 && inc > 0){
-    msg = 'Uma meta realista é investir entre <strong>' + fmt(meta10) + '</strong> e <strong>' + fmt(meta20) + '</strong> este mês.';
+    msg = 'Dinheiro parado perde valor. Investe pelo menos <strong>' + fmt(meta10) + '</strong> este mês.';
   } else if((goal === 'meta' || goal === 'controle') && bal > 0 && state.goals.length){
     const g = state.goals[0];
     const rem = Math.max(0, g.target - g.current);
-    const aporteRealista = meta10;
-    if(rem > 0 && aporteRealista > 0) msg = 'Para a meta "' + g.name + '", um aporte realista é <strong>' + fmt(aporteRealista) + '/mês</strong> — faltam ' + fmt(rem) + '.';
+    if(rem > 0) msg = 'Faltam <strong>' + fmt(rem) + '</strong> para "' + g.name + '". O que você vai fazer com o saldo de hoje?';
   }
 
   const dateEl = document.getElementById('dh-date');

@@ -1022,7 +1022,7 @@ body{overflow:hidden auto;}
       </svg>
     </div>
     <div class="auth-title">Marco</div>
-    <div class="auth-sub">Seu assistente financeiro pessoal</div>
+    <div class="auth-sub">Insira o email usado na compra para criar sua conta</div>
 
     <div class="auth-email-form">
       <input type="email" class="finput" id="auth-email" placeholder="seu@email.com" style="margin-bottom:8px;">
@@ -1306,9 +1306,23 @@ async function signUpWithEmail(){
   const email=document.getElementById('auth-email').value.trim();
   const pass=document.getElementById('auth-pass').value;
   if(!email||pass.length<6){showAuthMsg('Use pelo menos 6 caracteres na senha');return;}
+  
+  // Verifica licença antes de criar conta
+  showAuthMsg('Verificando acesso...');
+  const {data:lic,error:licErr}=await sb
+    .from('licencas')
+    .select('email')
+    .eq('email', email.toLowerCase().trim())
+    .maybeSingle();
+  
+  if(licErr||!lic){
+    showAuthMsg('❌ Email não encontrado. Adquira o acesso em pay.cakto.com.br/3c2egms_861701');
+    return;
+  }
+
   const {error}=await sb.auth.signUp({email,password:pass,options:{emailRedirectTo:'https://marcoia.vercel.app'}});
   if(error) showAuthMsg(error.message);
-  else showAuthMsg('✓ Verifique seu email para confirmar o cadastro');
+  else showAuthMsg('✓ Conta criada! Entrando...');
 }
 
 async function signInWithMagicLink(){

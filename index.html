@@ -2793,6 +2793,14 @@ function renderDashHeader(inc, exp){
   }catch(e){console.warn('Marco: renderDashHeader error', e);}
 }
 
+// ─── CLEAR CACHE ───────────────────────────────────────
+function clearCache(){
+  if(!confirm('Isso vai limpar o cache local. Seus dados na nuvem ficam intactos. Continuar?')) return;
+  localStorage.clear();
+  toast('Cache limpo — recarregando...');
+  setTimeout(()=>window.location.reload(), 1000);
+}
+
 // ─── EXPORT / IMPORT ───────────────────────────────────
 function exportData(){
   const prof=JSON.parse(localStorage.getItem('marco_profile')||'{}');

@@ -1696,11 +1696,11 @@ function renderDashInsights(txs, inc, exp){
     if(projectedBal>0){
       let saveText='';
       if(taxaGuardado>=20){
-        saveText=`Você está guardando ${taxaGuardado}% da renda este mês — acima da meta de 20%. Excelente disciplina!`;
+        saveText='Guardando '+taxaGuardado+'% da renda. Bom. Agora mantém — consistência é o que separa quem constrói de quem só planeja.';
       } else if(taxaGuardado>=10){
-        saveText=`Você está guardando ${taxaGuardado}% da renda. Boa! A meta ideal é chegar a 20% (${fmt(meta20)}/mês).`;
+        saveText='Guardando '+taxaGuardado+'% da renda. Razoável. Dá para ir para 20% ('+fmt(meta20)+'/mês) — o que está impedindo?';
       } else if(bal>0){
-        saveText=`Projeção de ${fmt(Math.round(projectedBal))} sobrando. Uma meta realista é guardar 10-20% da renda (${fmt(meta10)}–${fmt(meta20)}) — não precisa ser tudo.`;
+        saveText='Projeção de '+fmt(Math.round(projectedBal))+' sobrando. Guarda pelo menos '+fmt(meta10)+' antes de gastar o resto. Não depois.';
       }
       insights.push({
         type:'pos',icon:SVGS.trend,
@@ -1998,7 +1998,7 @@ function renderReport(){
     const avgExp=Math.round(tx6.reduce((a,m)=>a+m.exp,0)/6);
     const topCat=ents[0]?getCat('out',ents[0][0]).name:'—';
     const taxaG=incNow>0?Math.round((expNow/incNow)*100):0;
-    let tone=taxaG<70?'Mês positivo':taxaG<90?'Atenção aos gastos':'Gastos elevados';
+    let tone=taxaG<70?'Mês controlado':taxaG<90?'Gastou bastante':taxaG<100?'No limite':'Passou do limite';
     narEl.innerHTML='<strong>'+tone+'.</strong> Em '+MONTHS[curMonth]+' você gastou <strong>'+taxaG+'%</strong> da sua renda. Seu maior gasto foi <strong>'+topCat+'</strong>. A média dos últimos 6 meses: <strong>'+fmt(avgInc)+'</strong> em receitas e <strong>'+fmt(avgExp)+'</strong> em gastos.';
   } else if(narEl){narEl.innerHTML='';}
   if(!ents.length){rel.innerHTML='<div class="empty"><div class="et">Sem gastos este mês.</div></div>';return;}
@@ -2101,16 +2101,16 @@ function renderMarcoPage(){
   const cm={};txs.filter(t=>t.type==='out').forEach(t=>{cm[t.cat]=(cm[t.cat]||0)+t.amount;});
   const ins=[];
   const bal=inc-exp;
-  if(bal>0)ins.push({type:'ok',icon:SVGS.trend,title:'Saldo positivo',body:`Você está com ${fmt(bal)} de saldo esse mês. Continue assim!`});
-  else ins.push({type:'warn',icon:SVGS.warn,title:'Gastos acima das receitas',body:`Você está ${fmt(Math.abs(bal))} negativo. Vamos ver onde cortar?`});
+  if(bal>0)ins.push({type:'ok',icon:SVGS.trend,title:'Saldo no azul',body:'Sobrou '+fmt(bal)+' esse mês. Vai guardar ou vai gastar? A escolha é sua.'});
+  else ins.push({type:'warn',icon:SVGS.warn,title:'Você gastou mais do que ganhou',body:'Menos '+fmt(Math.abs(bal))+' no saldo. Isso não é azar — alguma coisa saiu errado. O que foi?'});
   const blown=state.budgets.filter(b=>(cm[b.cat]||0)>b.limit);
   if(blown.length)ins.push({type:'warn',icon:SVGS.alert,title:`${blown.length} orçamento${blown.length>1?'s':''} estourado${blown.length>1?'s':''}`,body:`${blown.map(b=>getCat('out',b.cat).name).join(', ')} ultrapassou o limite esse mês.`});
-  if(state.goals.length){const g=[...state.goals].sort((a,b)=>b.current/b.target-a.current/a.target)[0];const pct=Math.round((g.current/g.target)*100);ins.push({type:'ok',icon:SVGS.target,title:`Meta "${g.name}" em ${pct}%`,body:`Faltam ${fmt(g.target-g.current)} para atingir. Você está no caminho certo.`});}
+  if(state.goals.length){const g=[...state.goals].sort((a,b)=>b.current/b.target-a.current/a.target)[0];const pct=Math.round((g.current/g.target)*100);ins.push({type:'ok',icon:SVGS.target,title:'Meta "'+g.name+'" em '+pct+'%',body:'Faltam '+fmt(g.target-g.current)+'. '+( pct<30?'Ainda longe. O que vai fazer diferente esse mês?':pct<70?'No caminho. Não para agora.':'Quase lá. Não deixa esfriar.')});}
   const topE=Object.entries(cm).sort((a,b)=>b[1]-a[1])[0];
   if(topE)ins.push({icon:SVGS.money,title:`Maior gasto: ${getCat('out',topE[0]).name}`,body:`${fmt(topE[1])} em ${getCat('out',topE[0]).name.toLowerCase()} esse mês.`});
   const igridEl=document.getElementById('igrid');if(igridEl)igridEl.innerHTML=ins.map(i=>`<div class="icard ${i.type||''}"><div class="iico">${i.icon}</div><div class="iti">${i.title}</div><div class="ibo">${i.body}</div></div>`).join('');
   const mfcEl=document.getElementById('mfc-msgs');if(mfcEl&&!mfcEl.children.length){
-    setTimeout(()=>{addMsg('mfc-msgs','marco','Oi! Esse mês você teve '+fmt(inc)+' de receitas e '+fmt(exp)+' em gastos. Me pergunta qualquer coisa — estou aqui para ajudar! 👋');},300);
+    setTimeout(()=>{addMsg('mfc-msgs','marco', inc===0?'Sem dados ainda. Me conta: quanto você ganhou e gastou esse mês?':'Esse mês: '+fmt(inc)+' de receitas, '+fmt(exp)+' em gastos. Me pergunta o que quiser — mas vai ser resposta direta.');},300);
   }
 }
 
@@ -2122,7 +2122,7 @@ function toggleFloat(){
       const txs=state.transactions.filter(t=>txIM(t,curYear,curMonth));
       const inc=txs.filter(t=>t.type==='in').reduce((a,t)=>a+t.amount,0);
       const exp=txs.filter(t=>t.type==='out').reduce((a,t)=>a+t.amount,0);
-      addMsg('fmsgs','marco',`Oi! 👋 ${fmt(inc)} de receitas e ${fmt(exp)} em gastos esse mês. Me pergunta algo!`);
+      addMsg('fmsgs','marco', inc===0?'Sem lançamentos ainda. Coloca os dados e a conversa fica mais útil.':''+fmt(inc)+' de receitas, '+fmt(exp)+' em gastos. Me pergunta.');
     },200);
   }
 }
